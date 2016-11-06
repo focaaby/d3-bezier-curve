@@ -9,11 +9,7 @@ var line = d3.svg.line()
                   .y(function(d) { return d.y; })
                   .interpolate("linear");
 
-var path = svg.append("path")
-              .attr("d", line(points))
-              .attr("stroke", "steelblue")
-              .attr("stroke-width", "2")
-              .attr("fill", "none");
+bezier(points[0], points[1], points[2], points[3], 0);
 
 var circle = svg.selectAll("circle")
                 .data(points)
@@ -21,32 +17,53 @@ var circle = svg.selectAll("circle")
                 .append("circle")
                 .attr("cx", function(d) { return d.x})
                 .attr("cy", function(d) { return d.y})
-                .attr("r", 6.5)
+                .attr("r", 10)
                 .attr("stroke", "steelblue")
                 .call(d3.behavior.drag()
-                  .on("dragstart", function(d) {
-                    this.__origin__ = [d.x, d.y];
-                  })
+                  .on("dragstart", function(d) { d3.select(this).classed("active", true); })
                   .on("drag", function(d) {
-                    d.x = Math.min(1200, Math.max(0, this.__origin__[0] += d3.event.dx));
-                    d.y = Math.min(600, Math.max(0, this.__origin__[1] += d3.event.dy));
-                    // bezier = {};
-                    update();
-                    svg.selectAll("circle")
-                      .attr("cx", function(d) { return d.x})
-                      .attr("cy", function(d) { return d.y})
+                    d3.selectAll("path").remove();
+                    bezier(points[0], points[1], points[2], points[3], 0);
+                    d3.select(this)
+                      .attr("cx", d.x = d3.event.x)
+                      .attr("cy", d.y = d3.event.y);
                   })
-                  .on("dragend", function() {
-                    delete this.__origin__;
-                  }));
+                  .on("dragend", function() { d3.select(this).classed("active", false); }));
 
-function update() {
 
-  d3.selectAll("path").remove();
 
-  path = svg.append("path")
-            .attr("d", line(points))
-            .attr("stroke", "steelblue")
-            .attr("stroke-width", "2")
-            .attr("fill", "none");
+function bezier(p1, p2, p3, p4, order) {
+
+  // d3.selectAll("path").remove();
+
+  var p12 = { "x":(p1.x + p2.x) / 2, "y": (p1.y + p2.y)/2 },
+      p23 = { "x":(p3.x + p2.x) / 2, "y": (p3.y + p2.y)/2 },
+      p34 = { "x":(p3.x + p4.x) / 2, "y": (p3.y + p4.y)/2 };
+
+  var p123 = { "x": (p12.x + p23.x) / 2, "y": (p12.y + p23.y)/2 },
+      p234 = { "x": (p23.x + p34.x) / 2, "y": (p23.y + p34.y)/2 };
+
+  var q = { "x": (p123.x + p234.x) / 2, "y": (p123.y + p234.y)/2 };
+
+  var leftSide = [p1, p12, p123, q];
+  var rightSide = [q, p234, p34, p4];
+
+  if (order > 3) {
+    // return;
+    var leftpath = svg.append("path")
+                  .attr("d", line(leftSide))
+                  .attr("stroke", "steelblue")
+                  .attr("stroke-width", "2")
+                  .attr("fill", "none");
+
+    var rightpath = svg.append("path")
+                  .attr("d", line(rightSide))
+                  .attr("stroke", "steelblue")
+                  .attr("stroke-width", "2")
+                  .attr("fill", "none");
+    return;
+  }
+
+  bezier(p1, p12, p123, q, order + 1);
+  bezier(q, p234, p34, p4, order + 1);
 }
