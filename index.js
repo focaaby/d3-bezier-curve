@@ -1,15 +1,20 @@
-var svg = d3.select('body')
-            .append('svg')
-            .attr({'width': 1200, 'height': 600})
+var width = 1200, height = 600;
 
-var points = [{x: 20, y: 250}, {x: 20, y: 30}, {x: 100, y: 20}, {x: 200, y: 250}];
+var svg = d3.select("body")
+            .append("svg")
+            .attr({"width": width, "height": height});
+
+
+var points = d3.range(1, 5).map(function(i) {
+  return { "x": i * width / 5, "y": 50 + Math.random() * (height - 100) };
+});
 
 var line = d3.svg.line()
                   .x(function(d) { return d.x; })
                   .y(function(d) { return d.y; })
                   .interpolate("linear");
 
-bezier(points[0], points[1], points[2], points[3], 0);
+bezier(points, 0);
 
 var circle = svg.selectAll("circle")
                 .data(points)
@@ -23,39 +28,36 @@ var circle = svg.selectAll("circle")
                   .on("dragstart", function(d) { d3.select(this).classed("active", true); })
                   .on("drag", function(d) {
                     d3.selectAll("path").remove();
-                    bezier(points[0], points[1], points[2], points[3], 0);
+                    bezier(points, 0);
                     d3.select(this)
                       .attr("cx", d.x = d3.event.x)
                       .attr("cy", d.y = d3.event.y);
                   })
                   .on("dragend", function() { d3.select(this).classed("active", false); }));
 
+function getMids(points) {
+  var tmp = [];
+  for (var i = 0; i < points.length - 1; i++) {
+    tmp.push({ "x": (points[i].x + points[i+1].x)/2, "y": (points[i].y + points[i+1].y)/2});
+  }
+  return tmp;
+}
 
 
-function bezier(p1, p2, p3, p4, order) {
+function bezier(points, order) {
 
-  // d3.selectAll("path").remove();
-
-  var p12 = { "x":(p1.x + p2.x) / 2, "y": (p1.y + p2.y)/2 },
-      p23 = { "x":(p3.x + p2.x) / 2, "y": (p3.y + p2.y)/2 },
-      p34 = { "x":(p3.x + p4.x) / 2, "y": (p3.y + p4.y)/2 };
-
-  var p123 = { "x": (p12.x + p23.x) / 2, "y": (p12.y + p23.y)/2 },
-      p234 = { "x": (p23.x + p34.x) / 2, "y": (p23.y + p34.y)/2 };
-
-  var q = { "x": (p123.x + p234.x) / 2, "y": (p123.y + p234.y)/2 };
-
-  var leftSide = [p1, p12, p123, q];
-  var rightSide = [q, p234, p34, p4];
+  var mid1 = getMids(points);
+  var mid2 = getMids(mid1);
+  var q = getMids(mid2);
+  var leftSide = [points[0], mid1[0], mid2[0], q[0]];
+  var rightSide = [q[0], mid2[1], mid1[2], points[3]];
 
   if (order > 3) {
-    // return;
     var leftpath = svg.append("path")
                   .attr("d", line(leftSide))
                   .attr("stroke", "steelblue")
                   .attr("stroke-width", "2")
                   .attr("fill", "none");
-
     var rightpath = svg.append("path")
                   .attr("d", line(rightSide))
                   .attr("stroke", "steelblue")
@@ -64,6 +66,7 @@ function bezier(p1, p2, p3, p4, order) {
     return;
   }
 
-  bezier(p1, p12, p123, q, order + 1);
-  bezier(q, p234, p34, p4, order + 1);
+  bezier(leftSide, order + 1);
+  bezier(rightSide, order + 1);
+
 }
